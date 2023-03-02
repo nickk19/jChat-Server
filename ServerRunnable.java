@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.ArrayList;
 
 class ServerRunnable implements Runnable {
 	Socket client = null;
@@ -17,7 +18,7 @@ class ServerRunnable implements Runnable {
 			DataOutputStream outStream = new DataOutputStream(client.getOutputStream());
 
 			String username = MultiServer.connections.get(client);
-			broadcast(username + " connected.");
+			broadcast(username + " connected");
 
 			while (true) {
 				String strRicevuta = inStream.readLine();
@@ -35,7 +36,7 @@ class ServerRunnable implements Runnable {
 			MultiServer.connections.remove(client);
 			System.out.println(MultiServer.ANSI_YELLOW + username + " disconnected. Connected clients: " + MultiServer.connections.size() + MultiServer.ANSI_RESET);
 
-			broadcast(username + " disconnected.");
+			broadcast(username + " disconnected");
 			client.close();
 		} catch (Exception e) {
 			System.out.println(MultiServer.ANSI_RED + "Server Error." + MultiServer.ANSI_RESET);
@@ -43,11 +44,22 @@ class ServerRunnable implements Runnable {
 		}
 	}
 
-	public static void broadcast(String message) {
+	public void broadcast(String message) {
 		try {
-			for (Socket sk: MultiServer.connections.keySet()) {
+			for (Socket sk : MultiServer.connections.keySet()) {
 				DataOutputStream out = new DataOutputStream(sk.getOutputStream());
 				out.writeBytes(message + "\n");
+	
+				if (message.endsWith("connected") || message.endsWith("disconnected")) {
+					StringBuilder connectedClients = new StringBuilder();
+					for (String clientName : MultiServer.connections.values()) {
+						connectedClients.append(clientName).append(",");
+					}
+
+					connectedClients.append("\n");
+					byte[] clientsBytes = connectedClients.toString().getBytes();
+					out.write(clientsBytes, 0, clientsBytes.length);
+				}
 			}
 		} catch (IOException e) {
 			System.out.println(MultiServer.ANSI_RED + "Error while broadcasting message." + MultiServer.ANSI_RESET);
